@@ -1,0 +1,215 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.IsolatedStorage;
+using System.Xml.Serialization;
+using Microsoft.Phone.BackgroundAudio;
+
+namespace AudioPlaybackAgent
+{
+    public class AudioPlayerList
+    {
+        private const string PLAYLISTFILEPATH = "PlayList.xml";
+        private const string SETTINGFILEPATH = "Setting.xml";
+        public const string ImagePath = "Shared/Media/TEMPCOVER.jpg";
+
+        private static AudioInfoList PlayList { get; set; }
+
+        private static PlayerSetting _playerSetting = new PlayerSetting();
+
+        public static PlayerSetting PlayerSetting
+        {
+            get
+            {
+                if(_playerSetting!=null)
+                return _playerSetting;
+                LoadSetting();
+                return PlayerSetting;
+            }
+            set
+            {
+                _playerSetting = value;
+            }
+        }
+
+        public static void AddToList(List<AudioInfo> list)
+        {
+            foreach (var t in list)
+            {
+                AddToList(t);
+            }
+        }
+
+        public static void AddToList(AudioInfo track)
+        {
+            var playList = PlayList ?? new AudioInfoList();
+            if (playList.Contains(track))
+                playList.Remove(track);
+            playList.Add(track);
+            PlayList = playList;
+        }
+
+        public static void RemoveFromList(List<AudioInfo> list)
+        {
+            foreach (var audioTrack in list)
+            {
+                RemoveFromList(audioTrack);
+            }
+        }
+
+        public static void RemoveFromList(AudioInfo track)
+        {
+            var playList = PlayList ?? new AudioInfoList();
+            if (playList.Contains(track))
+                playList.Remove(track);
+            PlayList = playList;
+        }
+
+        public static AudioTrack GetNextTrack()
+        {
+            // TODO: 添加逻辑以获取下一条音轨
+            if (PlayList == null) LoadPlayList();
+            LoadSetting();
+            if (PlayerSetting == null) PlayerSetting = new PlayerSetting();
+            var playList = PlayList;
+            var trackIndex = PlayerSetting.TrackIndex;
+            if (playList == null || playList.Count == 0) return null;
+            lock (playList)
+            {
+                var real = trackIndex;
+                if (real < 0) //第一次播放
+                {
+                    real = PlayerSetting.ShuffleOn ? (new Random()).Next(playList.Count) : 0;
+                }
+                else
+                {
+                    if (PlayerSetting.SingleTrackOn)
+                        real = trackIndex;
+                    else if (PlayerSetting.ShuffleOn)
+                        real = (new Random()).Next(playList.Count);
+                    else
+                        real = (++real)%playList.Count;
+                }
+
+                // 指定曲目
+                PlayerSetting.TrackIndex = real;
+                var track = playList[real];
+                SaveSetting();
+                return new AudioTrack(null, track.Title, track.Artist, track.Album, null, track.Tag, EnabledPlayerControls.All);
+            }
+        }
+
+        public static AudioTrack GetPreviousTrack()
+        {
+            // TODO: 添加逻辑以获取前一条音轨
+            if (PlayList == null) LoadPlayList();
+            LoadSetting();
+            if(PlayerSetting==null)PlayerSetting=new PlayerSetting();
+            var playList = PlayList;
+            var trackIndex = PlayerSetting.TrackIndex;
+            if (playList == null || playList.Count == 0) return null;
+            lock (playList)
+            {
+                var real = trackIndex;
+                if (real < 0) //第一次播放
+                {
+                    real = PlayerSetting.ShuffleOn ? (new Random()).Next(playList.Count) : playList.Count - 1;
+                }
+                else
+                {
+                    if (PlayerSetting.SingleTrackOn)
+                        real = trackIndex;
+                    else if (PlayerSetting.ShuffleOn)
+                        real = (new Random()).Next(playList.Count);
+                    else
+                        real = (--real + playList.Count)%playList.Count;
+                }
+
+                // 指定曲目
+                PlayerSetting.TrackIndex = real;
+                var track = playList[real];
+                SaveSetting();
+                return new AudioTrack(null, track.Title, track.Artist, track.Album, null, track.Tag, EnabledPlayerControls.All);
+            }
+        }
+
+        public static AudioTrack GetCurrentTrack()
+        {
+            // TODO: 添加逻辑以获取前一条音轨
+            if (PlayList == null) LoadPlayList();
+            LoadSetting();
+            if (PlayerSetting == null) PlayerSetting = new PlayerSetting();
+            var playList = PlayList;
+            if(PlayerSetting.TrackIndex<0)
+                PlayerSetting.TrackIndex = 0;
+            var trackIndex = PlayerSetting.TrackIndex;
+            if (playList == null || playList.Count == 0) return null;
+            var track = playList[trackIndex%playList.Count];
+            return new AudioTrack(null, track.Title, track.Artist, track.Album, null, track.Tag, EnabledPlayerControls.All);
+        }
+
+        public static void SavePlayList()
+        {
+            if (PlayList == null) return;
+            if (IsolatedStorageFile.GetUserStoreForApplication().FileExists(PLAYLISTFILEPATH))
+                IsolatedStorageFile.GetUserStoreForApplication().DeleteFile(PLAYLISTFILEPATH);
+            var serializer = new XmlSerializer(typeof (AudioInfoList));
+            using (var stream = new IsolatedStorageFileStream(PLAYLISTFILEPATH, FileMode.Create, FileAccess.Write, IsolatedStorageFile.GetUserStoreForApplication()))
+            {
+                serializer.Serialize(stream, PlayList);
+                stream.Flush();
+                stream.Close();
+                stream.Dispose();
+            }
+        }
+
+        public static void LoadPlayList()
+        {
+            if (!IsolatedStorageFile.GetUserStoreForApplication().FileExists(PLAYLISTFILEPATH))
+                PlayList = new AudioInfoList();
+            else
+            {
+                var serializer = new XmlSerializer(typeof (AudioInfoList));
+                using (var stream = new IsolatedStorageFileStream(PLAYLISTFILEPATH, FileMode.Open, FileAccess.Read, IsolatedStorageFile.GetUserStoreForApplication()))
+                {
+                    PlayList = (AudioInfoList) serializer.Deserialize(stream);
+                    stream.Close();
+                    stream.Dispose();
+                }
+            }
+        }
+
+        public static void SaveSetting()
+        {
+            lock (IsolatedStorageFile.GetUserStoreForApplication())
+            {
+                if (IsolatedStorageFile.GetUserStoreForApplication().FileExists(SETTINGFILEPATH))
+                    IsolatedStorageFile.GetUserStoreForApplication().DeleteFile(SETTINGFILEPATH);
+                var serializer = new XmlSerializer(typeof (PlayerSetting));
+                using (var stream=new IsolatedStorageFileStream(SETTINGFILEPATH, FileMode.Create, FileAccess.Write, IsolatedStorageFile.GetUserStoreForApplication()))
+                {
+                    serializer.Serialize(stream, PlayerSetting);
+                    stream.Flush();
+                    stream.Close();
+                    stream.Dispose();
+                }
+            }
+        }
+
+        public static void LoadSetting()
+        {
+            if (!IsolatedStorageFile.GetUserStoreForApplication().FileExists(SETTINGFILEPATH))
+                return;
+            var serializer = new XmlSerializer(typeof (PlayerSetting));
+            using (var stream = new IsolatedStorageFileStream(SETTINGFILEPATH, FileMode.Open, FileAccess.Read, IsolatedStorageFile.GetUserStoreForApplication()))
+            {
+                var result = (PlayerSetting) serializer.Deserialize(stream) ?? new PlayerSetting();
+                PlayerSetting = result;
+                stream.Close();
+                stream.Dispose();
+            }
+        }
+    }
+
+
+}

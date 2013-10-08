@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.20506</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{63B5A643-E8D3-4D1B-A5CF-430B7CB687C4}</ProjectGuid>
+    <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>WPJFlacLib</RootNamespace>
+    <AssemblyName>WPJFlacLib</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <TargetFrameworkProfile>WindowsPhone71</TargetFrameworkProfile>
+    <TargetFrameworkIdentifier>Silverlight</TargetFrameworkIdentifier>
+    <SilverlightApplication>false</SilverlightApplication>
+    <ValidateXaml>true</ValidateXaml>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows" />
+    <Reference Include="system" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Net" />
+    <Reference Include="mscorlib.extensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="JFlac.Apps\Analyzer.cs" />
+    <Compile Include="JFlac.Apps\Decoder.cs" />
+    <Compile Include="JFlac.Frame\BadHeadException.cs" />
+    <Compile Include="JFlac.Frame\Channel.cs" />
+    <Compile Include="JFlac.Frame\ChannelConstant.cs" />
+    <Compile Include="JFlac.Frame\ChannelFixed.cs" />
+    <Compile Include="JFlac.Frame\ChannelLPC.cs" />
+    <Compile Include="JFlac.Frame\ChannelVerbatim.cs" />
+    <Compile Include="JFlac.Frame\EntropyCodingMethod.cs" />
+    <Compile Include="JFlac.Frame\EntropyPartitionedRice.cs" />
+    <Compile Include="JFlac.Frame\EntropyPartitionedRiceContents.cs" />
+    <Compile Include="JFlac.Frame\Frame.cs" />
+    <Compile Include="JFlac.Frame\Header.cs" />
+    <Compile Include="JFlac.IO\BitInputStream.cs" />
+    <Compile Include="JFlac.IO\BitOutputStream.cs" />
+    <Compile Include="JFlac.Metadata\Application.cs" />
+    <Compile Include="JFlac.Metadata\CueIndex.cs" />
+    <Compile Include="JFlac.Metadata\CueSheet.cs" />
+    <Compile Include="JFlac.Metadata\CueTrack.cs" />
+    <Compile Include="JFlac.Metadata\Metadata.cs" />
+    <Compile Include="JFlac.Metadata\Padding.cs" />
+    <Compile Include="JFlac.Metadata\Picture.cs" />
+    <Compile Include="JFlac.Metadata\SeekPoint.cs" />
+    <Compile Include="JFlac.Metadata\SeekTable.cs" />
+    <Compile Include="JFlac.Metadata\StreamInfo.cs" />
+    <Compile Include="JFlac.Metadata\Unknown.cs" />
+    <Compile Include="JFlac.Metadata\Violation.cs" />
+    <Compile Include="JFlac.Metadata\VorbisComment.cs" />
+    <Compile Include="JFlac.Metadata\VorbisString.cs" />
+    <Compile Include="JFlac.Util\BitMath.cs" />
+    <Compile Include="JFlac.Util\ByteData.cs" />
+    <Compile Include="JFlac.Util\CRC16.cs" />
+    <Compile Include="JFlac.Util\CRC8.cs" />
+    <Compile Include="JFlac.Util\DataOutput.cs" />
+    <Compile Include="JFlac.Util\LittleEndianDataOutput.cs" />
+    <Compile Include="JFlac.Util\WavWriter.cs" />
+    <Compile Include="JFlac\ChannelData.cs" />
+    <Compile Include="JFlac\Constants.cs" />
+    <Compile Include="JFlac\FixedPredictor.cs" />
+    <Compile Include="JFlac\FLACDecoder.cs" />
+    <Compile Include="JFlac\FrameDecodeException.cs" />
+    <Compile Include="JFlac\FrameListener.cs" />
+    <Compile Include="JFlac\FrameListeners.cs" />
+    <Compile Include="JFlac\LPCPredictor.cs" />
+    <Compile Include="JFlac\PCMProcessor.cs" />
+    <Compile Include="JFlac\PCMProcessors.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="JFlac.Sound.SPI\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.$(TargetFrameworkProfile).Overrides.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.CSharp.targets" />
+  <ProjectExtensions />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

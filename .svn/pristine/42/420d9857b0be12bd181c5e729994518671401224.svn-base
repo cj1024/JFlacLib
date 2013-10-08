@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{2D10523D-91BA-4CA7-8440-368DBE3A4E05}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>JFlacLib</RootNamespace>
+    <AssemblyName>JFlacLib</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="JFlac.Apps\Decoder.cs" />
+    <Compile Include="JFlac.Frame\BadHeadException.cs" />
+    <Compile Include="JFlac.Frame\Channel.cs" />
+    <Compile Include="JFlac.Frame\ChannelConstant.cs" />
+    <Compile Include="JFlac.Frame\ChannelFixed.cs" />
+    <Compile Include="JFlac.Frame\ChannelLPC.cs" />
+    <Compile Include="JFlac.Frame\ChannelVerbatim.cs" />
+    <Compile Include="JFlac.Frame\EntropyCodingMethod.cs" />
+    <Compile Include="JFlac.Frame\EntropyPartitionedRice.cs" />
+    <Compile Include="JFlac.Frame\EntropyPartitionedRiceContents.cs" />
+    <Compile Include="JFlac.Frame\Frame.cs" />
+    <Compile Include="JFlac.IO\BitOutputStream.cs" />
+    <Compile Include="JFlac.Metadata\Application.cs" />
+    <Compile Include="JFlac.Metadata\CueIndex.cs" />
+    <Compile Include="JFlac.Metadata\CueSheet.cs" />
+    <Compile Include="JFlac.Metadata\CueTrack.cs" />
+    <Compile Include="JFlac.Metadata\Padding.cs" />
+    <Compile Include="JFlac.Metadata\Picture.cs" />
+    <Compile Include="JFlac.Metadata\SeekPoint.cs" />
+    <Compile Include="JFlac.Metadata\SeekTable.cs" />
+    <Compile Include="JFlac.Metadata\Unknown.cs" />
+    <Compile Include="JFlac.Metadata\Violation.cs" />
+    <Compile Include="JFlac.Metadata\VorbisComment.cs" />
+    <Compile Include="JFlac.Metadata\VorbisString.cs" />
+    <Compile Include="JFlac.Util\BitMath.cs" />
+    <Compile Include="JFlac.Util\DataOutput.cs" />
+    <Compile Include="JFlac\FixedPredictor.cs" />
+    <Compile Include="JFlac\FrameDecodeException.cs" />
+    <Compile Include="JFlac\FrameListener.cs" />
+    <Compile Include="JFlac\FrameListeners.cs" />
+    <Compile Include="JFlac.Frame\Header.cs" />
+    <Compile Include="JFlac.IO\BitInputStream.cs" />
+    <Compile Include="JFlac.Metadata\Metadata.cs" />
+    <Compile Include="JFlac.Metadata\StreamInfo.cs" />
+    <Compile Include="JFlac.Util\ByteData.cs" />
+    <Compile Include="JFlac.Util\CRC16.cs" />
+    <Compile Include="JFlac.Util\CRC8.cs" />
+    <Compile Include="JFlac.Util\LittleEndianDataOutput.cs" />
+    <Compile Include="JFlac.Util\WavWriter.cs" />
+    <Compile Include="JFlac\ChannelData.cs" />
+    <Compile Include="JFlac\Constants.cs" />
+    <Compile Include="JFlac\FLACDecoder.cs" />
+    <Compile Include="JFlac\LPCPredictor.cs" />
+    <Compile Include="JFlac\PCMProcessor.cs" />
+    <Compile Include="JFlac\PCMProcessors.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="JFlac.Sound.SPI\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

@@ -1,0 +1,524 @@
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.IO.IsolatedStorage;
+using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using AudioPlaybackAgent;
+using AudioStreamSource.Flac;
+using CJToolkit.Util;
+using Microsoft.Phone.BackgroundAudio;
+using Microsoft.Phone.Controls;
+using Microsoft.Practices.Prism.Commands;
+using WP7FlacPlayer.Model;
+using WP7FlacPlayer.Util;
+using WPJFlacLib.JFlac.Metadata;
+
+namespace WP7FlacPlayer.ViewModel
+{
+
+    public class MainPageViewModel : ViewModel
+    {
+
+        #region Constructor
+
+        public MainPageViewModel()
+        {
+            if (IsFirstPlay)
+            {
+                IsFirstPlay = false;
+                if (PlayCommand != null)
+                    PlayCommand.RaiseCanExecuteChanged();
+            }
+            BackgroundAudioPlayer.Instance.Track = new AudioTrack(null, string.Empty, string.Empty, string.Empty, null);
+            BackgroundAudioPlayer.Instance.Play();
+            BackgroundAudioPlayer.Instance.Close();
+            BackgroundAudioPlayer.Instance.PlayStateChanged += BackgroundAudioPlayerStateChanged;
+            BackgroundAudioPlayer.Instance.Volume = 1;
+            ThreadUtil.RunAfterDelay(LoadPlayList, 1400);
+            InitialCommand();
+        }
+
+        ~MainPageViewModel()
+        {
+            BackgroundAudioPlayer.Instance.Close();
+        }
+
+        #endregion
+
+        #region Data
+
+        public ObservableCollection<MusicBriefInfo> PlayList { get; private set; }
+
+        private readonly AudioInfoList _audioTracks = new AudioInfoList(); 
+
+        private ListBox _playListBox;
+
+        public ListBox PlayListBox
+        {
+            get { return _playListBox; }
+            set
+            {
+                if (value != null)
+                {
+                    if (_playListBox != null)
+                        _playListBox.SelectionChanged -= PlayListBoxSelectionChanged;
+                    _playListBox = value;
+                    _playListBox.SelectionChanged += PlayListBoxSelectionChanged;
+                }
+            }
+        }
+
+        private Panorama _conrtolPanel;
+
+        public Panorama ControlPanel
+        {
+            get { return _conrtolPanel; }
+            set
+            {
+                if (value != null)
+                {
+                    _conrtolPanel = value;
+                }
+            }
+        }
+
+        private MusicBriefInfo _currentItem;
+
+        public MusicBriefInfo CurrentItem
+        {
+            get { return _currentItem; }
+            private set
+            {
+                if (_currentItem != null)
+                {
+                    _currentItem = value;
+                }
+                else
+                {
+                    if (value != null)
+                    {
+                        _currentItem = value;
+                    }
+                }
+                RaisePropertyChanged(() => CurrentItem);
+                RaisePropertyChanged(() => ProgressBarVisibility);
+            }
+        }
+
+        private bool _canPlay;
+
+        public bool CanPlay
+        {
+            get { return _canPlay; }
+            set
+            {
+                _canPlay = value;
+                RaisePropertyChanged(() => CanPlay);
+                RaisePropertyChanged(() => OnLoading);
+                if(PreCommand!=null)
+                    PreCommand.RaiseCanExecuteChanged();
+                if (NextCommand != null)
+                    NextCommand.RaiseCanExecuteChanged();
+                if (PlayCommand != null)
+                    PlayCommand.RaiseCanExecuteChanged();
+                if (PauseCommand != null)
+                    PauseCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private bool _onPlay;
+
+        public bool OnPlay
+        {
+            get { return _onPlay; }
+            set
+            {
+                _onPlay = value;
+                RaisePropertyChanged(() => OnPlay);
+                if (PauseCommand != null)
+                    PauseCommand.RaiseCanExecuteChanged();
+                if (PlayCommand != null)
+                    PlayCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        public bool OnLoading { get { return !CanPlay; } }
+
+        public Visibility ProgressBarVisibility
+        {
+            get { return CurrentItem == null ? Visibility.Collapsed : Visibility.Visible; }
+        }
+
+        private double _playedRate;
+
+        public double PlayedRate
+        {
+            get { return _playedRate; }
+            set
+            {
+                _playedRate = value;
+                RaisePropertyChanged(() => PlayedRate);
+            }
+        }
+
+        private bool _singleOn;
+
+        public bool SingleOn
+        {
+            get { return _singleOn; }
+            set
+            {
+                if(!_singleOn==value)
+                {
+                    _singleOn = value;
+                    RaisePropertyChanged(() => SingleOn);
+                    AudioPlayerList.PlayerSetting.SingleTrackOn = value;
+                    AudioPlayerList.SaveSetting();
+                }
+            }
+        }
+
+        private bool _shuffleOn;
+
+        public bool ShuffleOn
+        {
+            get { return _shuffleOn; }
+            set
+            {
+                if (!_shuffleOn == value)
+                {
+                    _shuffleOn = value;
+                    RaisePropertyChanged(() => ShuffleOn);
+                    AudioPlayerList.PlayerSetting.ShuffleOn = value;
+                    AudioPlayerList.SaveSetting();
+                }
+            }
+        }
+
+        private bool IsFirstPlay { get; set; }
+
+        public DelegateCommand PreCommand { get; private set; }
+
+        public DelegateCommand PlayCommand { get; private set; }
+
+        public DelegateCommand PauseCommand { get; private set; }
+
+        public DelegateCommand NextCommand { get; private set; }
+
+        #endregion
+
+        #region Method
+
+        /// <summary>
+        /// 初始化Command
+        /// </summary>
+        void InitialCommand()
+        {
+            PreCommand = new DelegateCommand(PlayPre, () => CanPlay);
+            NextCommand = new DelegateCommand(PlayNext, () => CanPlay);
+            PauseCommand = new DelegateCommand(Pause, () => CanPlay && OnPlay);
+            PlayCommand = new DelegateCommand(Play, () => IsFirstPlay || (CanPlay && !OnPlay));
+            PreCommand.RaiseCanExecuteChanged();
+            NextCommand.RaiseCanExecuteChanged();
+            PauseCommand.RaiseCanExecuteChanged();
+        }
+
+        /// <summary>
+        /// 加载播放列表
+        /// </summary>
+        void LoadPlayList()
+        {
+            //先加载所有歌曲
+            if (IsFirstPlay)
+            {
+                IsFirstPlay = false;
+                if (PlayCommand != null)
+                    PlayCommand.RaiseCanExecuteChanged();
+            }
+            PlayList = new ObservableCollection<MusicBriefInfo>();
+            var names = new List<IsolatedStorageFileInfo>();
+            var directorys = new List<IsolatedStorageDirectoryInfo>();
+            IsolatedStorageExtentions.GetFile("", "flac", ref directorys, ref names);
+            //再用线程刷歌曲信息
+            var analyzer = new FlacAnalyzer();
+            new Thread(() =>
+                {
+                    lock (PlayList)
+                    {
+                        foreach (var file in names)
+                        {
+                            using (var fs = IsolatedStorageFile.GetUserStoreForApplication().OpenFile(file.FullName, FileMode.Open, FileAccess.Read))
+                            {
+                                var metadatas = (Metadata[]) analyzer.Analysis(fs);
+                                SongProperty songInfo = null;
+                                StreamInfo streamInfo = null;
+                                WriteableBitmap image = null;
+                                var fileName = file.FullName;
+                                Deployment.Current.Dispatcher.BeginInvoke(() =>
+                                    {
+                                        foreach (var metadata in metadatas)
+                                        {
+                                            if (metadata is VorbisComment)
+                                            {
+                                                songInfo = SongProperty.FromVorbisComment(metadata as VorbisComment);
+                                            }
+                                            else if (metadata is StreamInfo)
+                                            {
+                                                streamInfo = metadata as StreamInfo;
+                                            }
+                                            else if (metadata is Picture && image == null)
+                                            {
+                                                using (var stream = new MemoryStream((metadata as Picture).Image))
+                                                {
+                                                    var bitmap = new BitmapImage();
+                                                    bitmap.SetSource(stream);
+                                                    image = new WriteableBitmap(bitmap);
+                                                }
+                                            }
+                                        }
+                                        var item = new MusicBriefInfo {Path = fileName, SongInfo = songInfo, StreamInfo = streamInfo, Image = image};
+                                        PlayList.Add(item);
+                                        var track = new AudioInfo { Title = item.SongInfo.Title, Artist = item.SongInfo.Artist, Album = item.SongInfo.Album, Tag = item.Path };
+                                        _audioTracks.Add(track);
+                                        AudioPlayerList.AddToList(track);
+                                        RaisePropertyChanged(() => PlayList);
+                                    });
+                            }
+                            Thread.Sleep(20);
+                        }
+                        AudioPlayerList.SavePlayList();
+                        AudioPlayerList.SaveSetting();
+                        Deployment.Current.Dispatcher.BeginInvoke(() =>
+                            {
+                                if (PlayList.Count <= 0) CanPlay = false;
+                                UpdateApplicationBarVisibility(true);
+                                IsFirstPlay = PlayList.Count <= 0;
+                                if (PlayCommand != null)
+                                    PlayCommand.RaiseCanExecuteChanged();
+                            });
+                    }
+                }).Start();
+        }
+        
+        /// <summary>
+        /// 播放当前音乐
+        /// </summary>
+        void PlayMusic(int index=0)
+        {
+            BackgroundAudioPlayer.Instance.Close();
+            AudioPlayerList.PlayerSetting.TrackIndex = index;
+            AudioPlayerList.PlayerSetting.ShuffleOn = ShuffleOn;
+            AudioPlayerList.PlayerSetting.SingleTrackOn = SingleOn;
+            AudioPlayerList.SaveSetting();
+            ControlPanel.DefaultItem = ControlPanel.Items[1];
+            BackgroundAudioPlayer.Instance.Play();
+            /*
+             * 使用MediaElement播放的方法
+            lock (Player)
+            {
+                CanPlay = false;
+                PlayedRate = 0d;
+                if (!IsolatedStorageFile.GetUserStoreForApplication().FileExists(CurrentItem.Path))
+                    return;
+                StopPlayer();
+                var inputStream = IsolatedStorageFile.GetUserStoreForApplication().OpenFile(CurrentItem.Path, FileMode.Open, FileAccess.Read);
+                var sourec = new FlacMediaStreamSource(inputStream);
+                Player.SetSource(sourec);
+                Player.Play();
+                CanPlay = true;
+            }
+            */
+        }
+
+        /// <summary>
+        /// 播放前一首
+        /// </summary>
+        void PlayPre()
+        {
+            CanPlay = false;
+            BackgroundAudioPlayer.Instance.SkipPrevious();
+        }
+
+        /// <summary>
+        /// 播放后一首
+        /// </summary>
+        void PlayNext()
+        {
+            CanPlay = false;
+            BackgroundAudioPlayer.Instance.SkipNext();
+        }
+
+        /// <summary>
+        /// 暂停
+        /// </summary>
+        void Pause()
+        {
+            BackgroundAudioPlayer.Instance.Pause();
+        }
+
+        /// <summary>
+        /// 播放
+        /// </summary>
+        void Play()
+        {
+            if (IsFirstPlay)
+            {
+                IsFirstPlay = false;
+                if (PlayCommand != null)
+                    PlayCommand.RaiseCanExecuteChanged();
+            }
+            if(BackgroundAudioPlayer.Instance.PlayerState==PlayState.Paused)
+            {
+                BackgroundAudioPlayer.Instance.Play();
+            }
+            else
+            {
+                if (CurrentItem == null || !PlayList.Contains(CurrentItem))
+                {
+                    PlayMusic();
+                }
+                else
+                {
+                    PlayMusic(PlayList.IndexOf(CurrentItem));
+                }
+            }
+        }
+
+        /// <summary>
+        /// 切换Appbar的可见性
+        /// </summary>
+        /// <param name="isVisibile"></param>
+        void UpdateApplicationBarVisibility(bool isVisibile)
+        {
+            try
+            {
+                var bar = ((PhoneApplicationPage)((PhoneApplicationFrame)Application.Current.RootVisual).Content).ApplicationBar;
+                bar.IsVisible = isVisibile;
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.StackTrace);
+            }
+        }
+
+        /// <summary>
+        /// 刷新当前播放项
+        /// </summary>
+        void UpdateCurrentItem()
+        {
+            if (BackgroundAudioPlayer.Instance.Track == null) return;
+            var path = BackgroundAudioPlayer.Instance.Track.Tag;
+            var item = PlayList.FirstOrDefault(i => i.Path == path);
+            if (CurrentItem == null && item != null)
+            {
+                CurrentItem = item;
+                return;
+            }
+            if (item != null && CurrentItem.Path != item.Path)
+                CurrentItem = item;
+        }
+
+        /// <summary>
+        /// 刷新当前播放进度
+        /// </summary>
+        void StartUpdateRate()
+        {
+            new Thread(() =>
+            {
+                while (BackgroundAudioPlayer.Instance.PlayerState == PlayState.Playing && BackgroundAudioPlayer.Instance.Track != null)
+                {
+                    try
+                    {
+                        var pos = BackgroundAudioPlayer.Instance.Position.TotalMilliseconds;
+                        var tot = BackgroundAudioPlayer.Instance.Track.Duration.TotalMilliseconds;
+                        Deployment.Current.Dispatcher.BeginInvoke(() => PlayedRate = pos/tot);
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
+                    Thread.Sleep(50);
+                }
+            }).Start();
+        }
+
+        #endregion
+
+        #region Event
+
+        void PlayListBoxSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (IsFirstPlay)
+            {
+                IsFirstPlay = false;
+                if (PlayCommand != null)
+                    PlayCommand.RaiseCanExecuteChanged();
+            }
+            if(PlayListBox.SelectedIndex<0)return;
+            var item = PlayListBox.SelectedItem as MusicBriefInfo;
+            CanPlay = false;
+            CurrentItem = item;
+            PlayMusic(PlayList.IndexOf(item));
+            PlayListBox.SelectedIndex = -1;
+        }
+
+        void BackgroundAudioPlayerStateChanged(object sender, EventArgs e)
+        {
+            switch (BackgroundAudioPlayer.Instance.PlayerState)
+            {
+                case PlayState.BufferingStarted:
+                    CanPlay = false;
+                    break;
+                case PlayState.TrackReady:
+                    CanPlay = true;
+                    UpdateCurrentItem();
+                    break;
+                case PlayState.Playing:
+                    StartUpdateRate();
+                    CanPlay = true;
+                    OnPlay = true;
+                    UpdateCurrentItem();
+                    break;
+                case PlayState.Stopped:
+                    CanPlay = false;
+                    OnPlay = false;
+                    break;
+                case PlayState.Paused:
+                    OnPlay = false;
+                    UpdateCurrentItem();
+                    break;
+            }
+        }
+
+        #endregion
+
+        #region Override
+
+        protected override bool OnNavigating(object sender, NavigatingCancelEventArgs e)
+        {
+            if (e.NavigationMode == NavigationMode.Back) //切回程序
+            {
+            }
+            else if (e.NavigationMode == NavigationMode.New) //切出程序
+            {
+            }
+            return base.OnNavigating(sender, e);
+        }
+
+        protected override bool OnBackKeyPressed(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            return MessageBox.Show("确定退出程序？", "确认", MessageBoxButton.OKCancel)!=MessageBoxResult.OK;
+        }
+
+        #endregion
+        
+    }
+
+}
